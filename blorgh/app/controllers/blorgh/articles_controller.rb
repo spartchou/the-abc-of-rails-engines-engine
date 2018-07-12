@@ -20,7 +20,7 @@ module Blorgh
 
     # GET /articles/1/edit
     def edit
-      @article.author_name = @article.author.name
+      @article.author_name = @article.author&.name
     end
 
     # POST /articles
