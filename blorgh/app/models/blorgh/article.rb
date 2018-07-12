@@ -1,5 +1,6 @@
 module Blorgh
   class Article < ActiveRecord::Base
+    attr_accessor :author_name
     has_many :comments
     belongs_to :author, class_name: "User"
 
