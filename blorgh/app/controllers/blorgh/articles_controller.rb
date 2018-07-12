@@ -20,6 +20,7 @@ module Blorgh
 
     # GET /articles/1/edit
     def edit
+      @article.author_name = @article.author.name
     end
 
     # POST /articles
@@ -36,6 +37,7 @@ module Blorgh
     # PATCH/PUT /articles/1
     def update
       if @article.update(article_params)
+        @article.author.update(name: article_params[:author_name])
         redirect_to @article, notice: 'Article was successfully updated.'
       else
         render :edit
