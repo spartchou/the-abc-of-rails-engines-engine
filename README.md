@@ -336,6 +336,6 @@ $ bin/rails db:migrate
 Blorgh.author_class = "User"
 ```
 
-一樣透過 rails s 啟動 server，現在新增文章時應該可同時加上作者資訊，成功新增後亦可顯示作者資訊，但若要正常地編輯作者資訊，則還需要調整一下 Engine 裡 articles_controller 中 edit 方法，完整程式碼請參閱這邊。
+一樣透過 rails s 啟動 server，現在新增文章時應該可同時加上作者資訊，成功新增後亦可顯示作者資訊，但若要正常地編輯作者資訊，則還需要調整一下 Engine 裡 articles_controller 中 edit 方法，[完整程式碼請參閱[這邊](https://github.com/spartchou/the-abc-of-rails-engines-engine/tree/master/blorgh)。
 
-如果可以讓 test/dummy 運作正常，那麼在主程式中只要實作 Step12 及 Step13，就可以達到一樣的效果了。
+如果可以讓 test/dummy 運作正常，那麼在[主程式中只要實作 Step12 及 Step13](https://github.com/spartchou/the-abc-of-rails-engines-main-app)，就可以達到一樣的效果了。
