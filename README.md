@@ -61,14 +61,57 @@ Rails Engine 主要的目的是透過簡單易用的程式介面 (interface) 來
 
 #### Step1. 產生一個 mountable 的 rails engine 雛形
 ```ruby
-$ bin/rails plugin new blorgh --mountable
+$ rails plugin new blorgh --mountable
 
 ```
+Engine 產生成功後，請切換到 blorgh 根目錄，找到 blorgh/blorgh.gemspec 檔案，將含有 `TODO` 的資訊進行修改，不然在後續的步驟中會出現 `blorgh/blorgh.gemspec is not valid. Please fix this gemspec. (Gem::InvalidSpecificationException)
+The validation error was '"FIXME" or "TODO" is not a description'` 的錯誤訊息。
+
+```ruby
+# blorgh/blorgh.gemspec
+# 這邊只是用來說明用的範例，請依照實際情況填寫
+
+Gem::Specification.new do |s|
+  s.name        = "blorgh"
+  s.version     = Blorgh::VERSION
+  s.authors     = [""]
+  s.email       = [""]
+  # 修改前
+  # s.homepage    = "TODO"
+  s.homepage    = "http://example.com"
+
+  # 修改前
+  # s.summary     = "TODO: Summary of Blorgh."
+  s.summary     = "Summary of Blorgh."
+
+  # 修改前
+  # s.description = "TODO: Description of Blorgh."
+  s.description = "Description of Blorgh."
+  s.license     = "MIT"
+
+  s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+
+  s.add_dependency "rails", "~> 5.2.0"
+
+  s.add_development_dependency "sqlite3"
+end
+```
+
+
 #### Step2. 快速產出文章的 Scaffolding (CRUD)
 ```ruby
 # engine 根目錄
 $ bin/rails generate scaffold article title:string text:text
+``` 
+
+在 Engine 根目錄，輸入下列指令，執行 migration 以產生 blorgh_articles 資料表
+```ruby
+# engine 根目錄
+$ bin/rails db:migrate
+
+#=> 執行完畢會產生 blorgh_articles 資料表
 ```
+
 請切換目錄到 `test/dummy` 底下，鍵入 `rails s` 啟動 rails server，在瀏覽器中輸入 http://localhost:3000/blorgh/articles 可看到具有CRUD功能的文章管理畫面，此時你應該已經可以新增、編輯、刪除文章，並在新增文章後可以看到文章列表。這邊的 test/dummy 其實是一個簡化版的 rails application，可讓我們在開發 engine 的時候用來測試之用，模擬日後 Engine 被掛入主程式的行為。
 
 #### Step3. 指定 engine 首頁路徑
@@ -87,8 +130,11 @@ end
 # engine 根目錄
 $ bin/rails generate model Comment article_id:integer text:text
  
-# 在 blorgh/test/dummy/ 目錄下執行下列執令
+# engine 根目錄
 $ bin/rails db:migrate
+
+# => 達行完畢後會產生 blorgh_comments 資料表
+# 這邊異動的是 test/dummy app
 ```
 為了在文章下面顯示評論內容，需要在 app/views/blorgh/articles/show.html.erb 中的 `<%= link_to 'Edit'` 之前加上下列程式碼
 ```erb
@@ -97,6 +143,7 @@ $ bin/rails db:migrate
 ```
 由於一篇文章 (article) 可以有多則評論 (comments)，因此需要在 article model 中定義 `has_many :comments` 關聯
 ```ruby
+# app/models/blorgh/article.rb
 module Blorgh
   class Article < ApplicationRecord
     has_many :comments
@@ -123,6 +170,7 @@ end
 ```
 我們已經在 model 中定義了關聯，還需要定義對應文章-評論的巢狀路由 (Nested Resources)，在 config/routes.rb 中修改路由如下
 ```ruby
+# config/routes.rb
 Blorgh::Engine.routes.draw do
   resources :articles do
     resources :comments
@@ -133,12 +181,13 @@ end
 ```
 有了 model，也有了路由，我們還需要對應新增 comment 所需的控制器 (controller)，可透過下列指令建立一個空的控制器
 ```ruby
+# engine 根目錄
 $ bin/rails g controller comments
 
 ```
 找到剛產生的控制器檔案 app/controllers/blorgh/comments_controller.rb，定義 create 方法，這個方法用以對應新增評論表單中的 POST 請求，程式碼如下
 ```ruby
-
+# app/controllers/blorgh/comments_controller.rb
 def create
   @article = Article.find(params[:article_id])
   @comment = @article.comments.create(comment_params)
@@ -181,7 +230,7 @@ private
 ```
 
 
-現在再瀏覽任一篇文章時，應該可以在下面看見一個表單，輸入評論後按下 Create Comment，就可以看到評論已經被新增並顯示在該文章的下方了。
+現在再次瀏覽任一篇文章時，應該可以在下面看見一個表單，輸入評論後按下 Create Comment，就可以看到評論已經被新增並顯示在該文章的下方了。
 
 完成上述的步驟便可以完成一個可提供發文與評論留言的簡單部落格 Rails Engine
 
@@ -208,21 +257,28 @@ gem 'blorgh', path: '../the-abc-of-rails-engines/blorgh'
 #### Step2. 掛載 Engine
 然後我們還需要在主程式的 config/routes.rb 中將 engine 掛進來，如此主程式才可以存取 engine 中的路由
 ```ruby
+# config/routes.rb
 # at: "/可依個人需求喜好命名"
 mount Blorgh::Engine, at: "/blog"
 ```
 
 #### Step3. 複製 Engine 的 migration 檔案
-此指令可重覆執行，不會有重複複製的副作用
+此指令可重覆執行，不會有重複複製的副作用(用以匯入 Engine 的 migration 檔案)
 ```ruby
 # 在主程式的根目錄
 $ bin/rails blorgh:install:migrations
+
+# 會出現下列訊息，檔案時戳會略有不同
+# => Copied migration 20180719154413_create_blorgh_articles.blorgh.rb from blorgh
+# => Copied migration 20180719154414_create_blorgh_comments.blorgh.rb from blorgh
 ```
 
 #### Step4. DB migrate
 ```ruby
-# 執行 migrate
+# 在主程式的根目錄執行 migrate
 $ bin/rails db:migrate
+
+# => 產生 blorgh_articles 與 blorgh_comments 資料表
 ```
 
 現在在主程式的根目錄中使用 `rails s` 指令啟動伺服器，並瀏覽 http://localhost:3000/blog 應該可以看見文章頁面，你此時應該已經可以新增、刪除、修改文章，還可以在文章下方新增評論了。
@@ -236,6 +292,7 @@ $ bin/rails db:migrate
 #### Step5. 在 Engine 中提供可由主程式定義「作者」類別的方法
 修改 lib/blorgh.rb 的 Blorgh module 中加入下列程式碼
 ```ruby
+# blorgh/lib/blorgh.rb
 module Blorgh
   # 此類別存取子將開放給主程式定義「作者」類別之用
   mattr_accessor :author_class
@@ -251,6 +308,7 @@ end
 #### Step6. Article 的作者
 在 article (app/models/blorgh/article.rb) 定義與作者的關聯及參照來源
 ```ruby
+# app/models/blorgh/article.rb
 module Blorgh
   class Article < ActiveRecord::Base
     # ... 略
@@ -264,16 +322,25 @@ end
 
 #### Step7. 新增 author_id 到 article 中的 migration 檔案
 ```ruby
+# engine 根目錄
 $ bin/rails g migration add_author_id_to_blorgh_articles author_id:integer
 
+# engine 根目錄
+$ bin/rails db:migrate
+
+# => 新增欄位 author_id 到 blorgh_articles 資料表
+# 這邊異動的是 test/dummy app
 ```
 
 #### Step8. 修改 article model 如下
 ```ruby
+# app/models/blorgh/article.rb
 module Blorgh
   class Article < ActiveRecord::Base
+  	
   	# 新增 author_name 欄位供暫時存取之用
     attr_accessor :author_name
+
     has_many :comments
     belongs_to :author, class_name: Blorgh.author_class.to_s
 
@@ -291,17 +358,18 @@ end
 ```
 
 #### Step9. 新增作者名稱欄位
-在 Engine 中的文章表單中(app/views/blorgh/articles/_form.html.erb) 新增作者名稱欄位
+在 Engine 中的文章表單中 (app/views/blorgh/articles/_form.html.erb) 的 :title 欄位前新增作者名稱欄位
 ```erb
   <div class="field">
-    <%= f.label :author_name %><br>
-    <%= f.text_field :author_name %>
+    <%= form.label :author_name %><br>
+    <%= form.text_field :author_name %>
   </div>
 ```
 
 #### Step10. 允許 :author_name 參數的傳遞
 在 Engine 的 app/controllers/blorgh/articles_controller.rb 中的私有方法 article_params 允許 :author_name 參數欄位的傳入
 ```ruby
+# app/controllers/blorgh/articles_controller.rb
   def article_params
     params.require(:article).permit(:title, :text, :author_name)
   end
@@ -318,14 +386,15 @@ end
 
 #### Step12. 用 test/dummy 來測試
 ```rb
+# blorgh/test/dummy
 # 新增 User 類別
 $ rails g model user name:string
 
-# 匯入 engine 的 migrations
-$ bin/rails blorgh:install:migrations
-
+# blorgh/test/dummy
 # 執行 db:migrate
 $ bin/rails db:migrate
+
+# => 新增 users 資料表
 
 ```
 
@@ -336,6 +405,7 @@ $ bin/rails db:migrate
 Blorgh.author_class = "User"
 ```
 
-一樣透過 rails s 啟動 server，現在新增文章時應該可同時加上作者資訊，成功新增後亦可顯示作者資訊，但若要正常地編輯作者資訊，則還需要調整一下 Engine 裡 articles_controller 中 edit 方法，[完整程式碼請參閱[這邊](https://github.com/spartchou/the-abc-of-rails-engines-engine/tree/master/blorgh)。
+一樣透過 `rails s` 啟動 rails server，打開瀏覽器瀏覽 http://localhost:3000/blorgh。
+現在新增文章時應該可同時加上作者資訊，成功新增後亦可顯示作者資訊，但若要正常地編輯作者資訊，則還需要調整一下 Engine 裡 articles_controller 中 edit 方法，完整程式碼請參閱[這邊](https://github.com/spartchou/the-abc-of-rails-engines-engine/tree/master/practice/blorgh)。
 
 如果可以讓 test/dummy 運作正常，那麼在[主程式中只要實作 Step12 及 Step13](https://github.com/spartchou/the-abc-of-rails-engines-main-app)，就可以達到一樣的效果了。
